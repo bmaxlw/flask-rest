@@ -25,9 +25,9 @@ class ClientModel(db.Model):
 
 clients = {}
 client_args = reqparse.RequestParser()
-client_args.add_argument("full_name", type=str, help='Full name undefined', required=True)
-client_args.add_argument("phone_number", type=str, help='Phone number undefined', required=True)
-client_args.add_argument("email_address", type=str, help='Email address undefined', required=True)
+client_args.add_argument("full_name", type=str, help='Full name undefined') # required=True
+client_args.add_argument("phone_number", type=str, help='Phone number undefined') # required=True
+client_args.add_argument("email_address", type=str, help='Email address undefined') # required=True
 
 # serialize
 resource_fields = {
@@ -59,6 +59,19 @@ class Client(Resource):
         db.session.add(client)
         db.session.commit()
         return {'message': 'Client added...'}
+
+    def put(self, client_id):
+        args = client_args.parse_args()
+        client = ClientModel.query.filter_by(client_id=client_id).first()
+        if args['full_name']:
+            client.full_name = args['full_name']
+        if args['phone_number']:
+            client.phone_number = args['phone_number']
+        if args['email_address']:
+            client.email_address = args['email_address']
+        db.session.merge(client)
+        db.session.commit()
+        return {'message': 'Client updated...'}
 
     def delete(self, client_id):
         abort_if_id_not_exists(client_id)
