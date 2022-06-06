@@ -1,5 +1,6 @@
 from http import client
 from importlib.metadata import requires
+from pydoc import cli
 from flask import Flask, request
 from flask_restful import Api, Resource, reqparse, abort, fields, marshal_with
 from flask_sqlalchemy import SQLAlchemy 
@@ -37,28 +38,33 @@ resource_fields = {
 }
 
 def abort_if_id_not_exists(client_id):
-    if client_id not in clients:
+    if not ClientModel.query.get(client_id):
         abort(404, message='Client does not exist...')
 
 def abort_if_id_exists(client_id):
-    if client_id in clients:
+    if ClientModel.query.get(client_id):
         abort(409, message='Client already exists...')
 
 class Client(Resource):
     @marshal_with(resource_fields)
     def get(self, client_id):
-        result = ClientModel.query.get(client_id)
+        abort_if_id_not_exists(client_id)
+        result = ClientModel.query.filter_by(client_id=client_id).first()
         return result
 
-    def put(self, client_id):
+    def post(self, client_id):
         abort_if_id_exists(client_id)
         args = client_args.parse_args()
-        clients[client_id] = args
-        return {'message': 'Client was added...'}
+        client = ClientModel(client_id=client_id, full_name=args['full_name'], phone_number=args['phone_number'], email_address=args['email_address'])
+        db.session.add(client)
+        db.session.commit()
+        return {'message': 'Client added...'}
 
     def delete(self, client_id):
         abort_if_id_not_exists(client_id)
-        del clients[client_id]
+        client = ClientModel.query.filter_by(client_id=client_id).first()
+        db.session.delete(client)
+        db.session.commit()
         return {'message': 'Client was deleted...'}
 
 api.add_resource(Client, '/clients/<int:client_id>')
